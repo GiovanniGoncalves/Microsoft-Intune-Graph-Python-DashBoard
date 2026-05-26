@@ -1,4 +1,6 @@
+import os
 import dash
+import dash_auth
 from dash import dcc, html, Input, Output
 import dash_bootstrap_components as dbc
 
@@ -9,6 +11,11 @@ app = dash.Dash(
 )
 app.title = "Intune Dashboard"
 server = app.server  # necessário para o gunicorn
+
+VALID_USERS = {
+    os.getenv("DASHBOARD_USER", "admin"): os.getenv("DASHBOARD_PASSWORD", "changeme")
+}
+auth = dash_auth.BasicAuth(app, VALID_USERS)
 
 NAV_LINKS = [
     ("Inventário", "/inventory", "bi-box-seam"),
