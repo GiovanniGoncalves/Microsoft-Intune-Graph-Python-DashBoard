@@ -8,6 +8,7 @@ app = dash.Dash(
     suppress_callback_exceptions=True,
 )
 app.title = "Intune Dashboard"
+server = app.server  # necessário para o gunicorn
 
 NAV_LINKS = [
     ("Inventário", "/inventory", "bi-box-seam"),
@@ -59,4 +60,4 @@ def render_page(pathname: str):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8050)
+    app.run(debug=False, port=8050)
