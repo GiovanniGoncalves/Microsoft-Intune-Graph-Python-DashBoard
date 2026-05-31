@@ -71,24 +71,42 @@ def layout() -> html.Div:
 
     # ── Distribuição de compliance (donut) ────────────────────
     if "complianceState" in df.columns:
-        comp_dist = df["complianceState"].value_counts().reset_index()
+        comp_dist  = df["complianceState"].value_counts().reset_index()
         comp_dist.columns = ["Estado", "Total"]
-        colors    = [COMPLIANCE_COLORS.get(s, "#9ca3af") for s in comp_dist["Estado"]]
+        colors     = [COMPLIANCE_COLORS.get(s, "#9ca3af") for s in comp_dist["Estado"]]
+        pull_vals  = [0.06 if i == 0 else 0 for i in range(len(comp_dist))]
 
         fig_compliance = go.Figure(go.Pie(
             labels=comp_dist["Estado"],
             values=comp_dist["Total"],
             hole=0.60,
-            marker=dict(colors=colors),
-            textinfo="label+percent",
+            pull=pull_vals,
+            marker=dict(
+                colors=colors,
+                line=dict(color="white", width=2),
+            ),
+            textinfo="label+value",
             textposition="outside",
             hovertemplate="%{label}: %{value}<extra></extra>",
         ))
+        fig_compliance.add_annotation(
+            text=f"<b>{compliance_pct}%</b>",
+            x=0.5, y=0.55,
+            font=dict(size=28, color=gauge_color, family="inherit"),
+            showarrow=False,
+        )
+        fig_compliance.add_annotation(
+            text="Compliance",
+            x=0.5, y=0.40,
+            font=dict(size=11, color=MUTED, family="inherit"),
+            showarrow=False,
+        )
         fig_compliance.update_layout(
-            showlegend=False,
-            margin=dict(t=20, b=30, l=20, r=20),
+            showlegend=True,
+            legend=dict(orientation="h", y=-0.15, font=dict(color=TEXT_SOFT, size=11)),
+            margin=dict(t=20, b=50, l=20, r=20),
             paper_bgcolor="rgba(0,0,0,0)",
-            height=260,
+            height=300,
         )
     else:
         fig_compliance = apply_theme(go.Figure())

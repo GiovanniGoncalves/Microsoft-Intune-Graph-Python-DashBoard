@@ -22,35 +22,43 @@ def layout() -> html.Div:
     # ── Gráfico: donut por plataforma (estilo DORA) ───────────
     platform_counts = df["operatingSystem"].value_counts().reset_index()
     platform_counts.columns = ["Plataforma", "Total"]
-    center_value = total
+
+    # Pull no maior segmento (índice 0 = maior valor)
+    pull_values = [0.06 if i == 0 else 0 for i in range(len(platform_counts))]
+
+    DONUT_COLORS = ["#1e40af", "#3b82f6", "#f97316", "#10b981", "#a855f7", "#f59e0b"]
 
     fig_platform = go.Figure(go.Pie(
         labels=platform_counts["Plataforma"],
         values=platform_counts["Total"],
-        hole=0.65,
-        marker=dict(colors=PALETTE),
+        hole=0.60,
+        pull=pull_values,
+        marker=dict(
+            colors=DONUT_COLORS[:len(platform_counts)],
+            line=dict(color="white", width=2),
+        ),
         textinfo="label+value",
         textposition="outside",
         hovertemplate="%{label}: %{value}<extra></extra>",
     ))
     fig_platform.add_annotation(
-        text=f"<b>{center_value}</b>",
-        x=0.5, y=0.52,
-        font=dict(size=28, color=TEXT, family="inherit"),
+        text=f"<b>{total}</b>",
+        x=0.5, y=0.55,
+        font=dict(size=32, color=TEXT, family="inherit"),
         showarrow=False,
     )
     fig_platform.add_annotation(
         text="Total",
-        x=0.5, y=0.38,
+        x=0.5, y=0.40,
         font=dict(size=11, color=MUTED, family="inherit"),
         showarrow=False,
     )
     fig_platform.update_layout(
         showlegend=True,
         legend=dict(orientation="h", y=-0.15, font=dict(color=TEXT_SOFT, size=11)),
-        margin=dict(t=20, b=40, l=20, r=20),
+        margin=dict(t=20, b=50, l=20, r=20),
         paper_bgcolor="rgba(0,0,0,0)",
-        height=280,
+        height=300,
     )
 
     # ── Gráfico: versões de SO ────────────────────────────────
