@@ -4,9 +4,11 @@ import dash_auth
 from dash import dcc, html, Input, Output
 import dash_bootstrap_components as dbc
 
+BI_ICONS_CDN = "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+
 app = dash.Dash(
     __name__,
-    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    external_stylesheets=[dbc.themes.BOOTSTRAP, BI_ICONS_CDN],
     suppress_callback_exceptions=True,
 )
 app.title = "Intune Dashboard"
@@ -18,37 +20,97 @@ VALID_USERS = {
 auth = dash_auth.BasicAuth(app, VALID_USERS)
 
 NAV_LINKS = [
-    ("Inventário", "/inventory", "bi-box-seam"),
+    ("Inventário",  "/inventory",   "bi-box-seam"),
     ("Operacional", "/operational", "bi-activity"),
-    ("Segurança", "/security", "bi-shield-check"),
+    ("Segurança",   "/security",    "bi-shield-check"),
 ]
 
 sidebar = html.Div([
+    # ── Logo ──────────────────────────────────────────────────
     html.Div([
-        html.H5("Intune", className="fw-bold text-white mb-0"),
-        html.Small("Device Dashboard", className="text-white-50"),
-    ], className="py-3 px-3 mb-2 border-bottom border-secondary"),
-    dbc.Nav(
-        [
-            dbc.NavLink(label, href=href, active="exact",
-                        className="text-white-50 py-2 px-3 rounded")
-            for label, href, _ in NAV_LINKS
-        ],
-        vertical=True,
-        pills=True,
-    ),
+        html.Div(
+            html.I(className="bi bi-shield-lock-fill",
+                   style={"color": "#58a6ff", "fontSize": "1.3rem"}),
+            style={
+                "backgroundColor": "rgba(88,166,255,0.12)",
+                "borderRadius": "8px",
+                "width": "40px", "height": "40px",
+                "display": "flex", "alignItems": "center", "justifyContent": "center",
+                "marginRight": "12px", "flexShrink": "0",
+            }
+        ),
+        html.Div([
+            html.Div("Intune", style={
+                "color": "#e6edf3", "fontWeight": "700",
+                "fontSize": "1rem", "lineHeight": "1.2",
+            }),
+            html.Div("Device Dashboard", style={
+                "color": "#7d8590", "fontSize": "0.7rem",
+            }),
+        ]),
+    ], className="d-flex align-items-center",
+       style={"padding": "20px 16px", "borderBottom": "1px solid #30363d"}),
+
+    # ── Navegação ─────────────────────────────────────────────
     html.Div([
-        html.Small("Dados atualizados a cada 5 min", className="text-secondary"),
-    ], className="position-absolute bottom-0 pb-3 px-3"),
-], className="bg-dark min-vh-100 py-2 position-relative", style={"width": "220px"})
+        html.P("NAVEGAÇÃO", style={
+            "color": "#7d8590", "fontSize": "10px",
+            "letterSpacing": "0.1em", "fontWeight": "600",
+            "marginBottom": "8px", "paddingLeft": "12px",
+        }),
+        html.Div([
+            dbc.NavLink(
+                [
+                    html.I(className=f"bi {icon}",
+                           style={"marginRight": "10px", "fontSize": "1rem"}),
+                    html.Span(label),
+                ],
+                href=href,
+                active="exact",
+                style={"borderRadius": "6px", "padding": "9px 12px",
+                       "marginBottom": "2px", "color": "#8892a4"},
+            )
+            for label, href, icon in NAV_LINKS
+        ]),
+    ], style={"padding": "16px 8px", "flexGrow": 1}),
+
+    # ── Rodapé ────────────────────────────────────────────────
+    html.Div([
+        html.Hr(style={"borderColor": "#30363d", "margin": "0 0 12px 0"}),
+        html.Div([
+            html.I(className="bi bi-arrow-clockwise me-2",
+                   style={"color": "#7d8590"}),
+            html.Span("Atualiza a cada 5 min",
+                      style={"color": "#7d8590", "fontSize": "11px"}),
+        ], className="d-flex align-items-center"),
+    ], style={"padding": "0 16px 20px 16px"}),
+
+], style={
+    "width": "230px",
+    "minHeight": "100vh",
+    "backgroundColor": "#0d1117",
+    "borderRight": "1px solid #30363d",
+    "flexShrink": "0",
+    "display": "flex",
+    "flexDirection": "column",
+})
 
 app.layout = dbc.Container([
     dcc.Location(id="url", refresh=False),
     html.Div([
         sidebar,
-        html.Div(id="page-content", className="p-4 flex-grow-1 overflow-auto"),
-    ], className="d-flex"),
-], fluid=True, className="p-0")
+        html.Div(
+            id="page-content",
+            style={
+                "flexGrow": 1,
+                "backgroundColor": "#0d1117",
+                "padding": "28px 32px",
+                "minHeight": "100vh",
+                "overflowX": "hidden",
+            }
+        ),
+    ], style={"display": "flex", "minHeight": "100vh"}),
+], fluid=True, className="p-0", style={"backgroundColor": "#0d1117"})
 
 
 @app.callback(Output("page-content", "children"), Input("url", "pathname"))
@@ -61,8 +123,16 @@ def render_page(pathname: str):
     if pathname == "/security":
         return security.layout()
     return html.Div([
-        html.H4("Página não encontrada", className="text-muted mt-5 text-center"),
-        dbc.Button("Ir para Inventário", href="/inventory", color="primary", className="d-block mx-auto mt-3"),
+        html.Div([
+            html.I(className="bi bi-exclamation-circle",
+                   style={"fontSize": "3rem", "color": "#7d8590"}),
+            html.H4("Página não encontrada",
+                    style={"color": "#7d8590", "marginTop": "16px"}),
+            dbc.Button(
+                [html.I(className="bi bi-house me-2"), "Ir para Inventário"],
+                href="/inventory", color="primary", className="mt-3",
+            ),
+        ], className="text-center mt-5"),
     ])
 
 
