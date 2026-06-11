@@ -54,7 +54,7 @@ def fetch_inventory_report() -> pd.DataFrame:
             zf = zipfile.ZipFile(io.BytesIO(resp.content))
             with zf.open(zf.namelist()[0]) as f:
                 df = pd.read_csv(f, encoding="utf-8-sig", low_memory=False)
-            for col in ["EnrolledDate", "LastContact"]:
+            for col in ["Enrollment date", "Last check-in", "Last EAS sync time"]:
                 if col in df.columns:
                     df[col] = pd.to_datetime(df[col], errors="coerce", utc=True)
             return df

@@ -79,7 +79,9 @@ def layout() -> html.Div:
     detail_cols = [c for c in detail_cols if c in android.columns]
     detail_df = with_loja[detail_cols].copy()
     if "Last check-in" in detail_df.columns:
-        detail_df["Last check-in"] = detail_df["Last check-in"].dt.strftime("%Y-%m-%d")
+        detail_df["Last check-in"] = pd.to_datetime(
+            detail_df["Last check-in"], errors="coerce", utc=True
+        ).dt.strftime("%Y-%m-%d")
 
     return html.Div([
         html.H4("Localização por Loja", className="mb-4 fw-bold"),
