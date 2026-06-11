@@ -13,6 +13,7 @@ NAV_LINKS = [
     ("Inventário", "/inventory", "bi-box-seam"),
     ("Operacional", "/operational", "bi-activity"),
     ("Segurança", "/security", "bi-shield-check"),
+    ("Lojas", "/stores", "bi-shop"),
 ]
 
 sidebar = html.Div([
@@ -45,13 +46,15 @@ app.layout = dbc.Container([
 
 @app.callback(Output("page-content", "children"), Input("url", "pathname"))
 def render_page(pathname: str):
-    from pages import inventory, operational, security
+    from pages import inventory, operational, security, stores
     if pathname in ("/", "/inventory"):
         return inventory.layout()
     if pathname == "/operational":
         return operational.layout()
     if pathname == "/security":
         return security.layout()
+    if pathname == "/stores":
+        return stores.layout()
     return html.Div([
         html.H4("Página não encontrada", className="text-muted mt-5 text-center"),
         dbc.Button("Ir para Inventário", href="/inventory", color="primary", className="d-block mx-auto mt-3"),

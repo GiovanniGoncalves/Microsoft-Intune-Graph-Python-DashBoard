@@ -8,4 +8,5 @@ CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
 GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
+GRAPH_BETA_URL = "https://graph.microsoft.com/beta"
 GRAPH_SCOPES = ["https://graph.microsoft.com/.default"]
