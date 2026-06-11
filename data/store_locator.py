@@ -1,12 +1,12 @@
 from typing import Optional
+import os
 import pandas as pd
 from ipaddress import ip_address
 
-BOUNDARY_FILE = (
-    "/Users/dsiwrkmng/Library/CloudStorage/"
-    "OneDrive-BibliotecasCompartilhadas-C&AModasS.A/"
-    "Field Sharepoint - Documentos/Controles/REPORTS_BI/"
-    "REPORT_ANDROID_FULL_LOJA/BASE_GATEWAY_BAUDERY.xlsx"
+# Caminho relativo ao projeto — funciona local e no Railway
+BOUNDARY_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "assets", "BASE_GATEWAY_BAUDERY.xlsx"
 )
 
 _boundaries: Optional[pd.DataFrame] = None
