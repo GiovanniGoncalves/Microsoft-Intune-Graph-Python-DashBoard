@@ -3,118 +3,208 @@ import plotly.graph_objects as go
 from dash import dash_table, dcc, html
 import dash_bootstrap_components as dbc
 from data.cache import get_devices
-
-
-def _kpi(title: str, value, color: str = "primary") -> dbc.Card:
-    return dbc.Card(
-        dbc.CardBody([
-            html.H6(title, className="card-title text-muted small"),
-            html.H2(str(value), className=f"text-{color} fw-bold mb-0"),
-        ]),
-        className="shadow-sm text-center h-100",
-    )
+from pages.components import (
+    kpi_card, chart_card, table_card, page_header, section_title,
+    apply_theme, PALETTE, TABLE_KWARGS, PRIMARY, SUCCESS, WARNING, DANGER,
+    BG_CARD, BORDER, MUTED, TEXT, TEXT_SOFT,
+)
 
 
 def layout() -> html.Div:
     df = get_devices()
 
-    total = len(df)
-    platforms = df["operatingSystem"].nunique() if "operatingSystem" in df.columns else 0
-    manufacturers = df["manufacturer"].nunique() if "manufacturer" in df.columns else 0
+    total         = len(df)
+    platforms     = df["operatingSystem"].nunique() if "operatingSystem" in df.columns else 0
+    manufacturers = df["manufacturer"].nunique()    if "manufacturer"    in df.columns else 0
+    compliant     = len(df[df["complianceState"] == "compliant"]) if "complianceState" in df.columns else 0
+    compliance_pct = f"{round(compliant / total * 100)}%" if total > 0 else "0%"
 
-    # Platform pie
+    # ── Gráfico: donut por plataforma (estilo DORA) ───────────
     platform_counts = df["operatingSystem"].value_counts().reset_index()
     platform_counts.columns = ["Plataforma", "Total"]
-    fig_platform = px.pie(
-        platform_counts, names="Plataforma", values="Total",
-        title="Distribuição por Plataforma",
-        color_discrete_sequence=px.colors.qualitative.Set2,
-        hole=0.4,
+
+    # Pull no maior segmento (índice 0 = maior valor)
+    pull_values = [0.06 if i == 0 else 0 for i in range(len(platform_counts))]
+
+    DONUT_COLORS = ["#1e40af", "#3b82f6", "#f97316", "#10b981", "#a855f7", "#f59e0b"]
+
+    fig_platform = go.Figure(go.Pie(
+        labels=platform_counts["Plataforma"],
+        values=platform_counts["Total"],
+        hole=0.60,
+        pull=pull_values,
+        marker=dict(
+            colors=DONUT_COLORS[:len(platform_counts)],
+            line=dict(color="white", width=2),
+        ),
+        textinfo="label+value",
+        textposition="outside",
+        hovertemplate="%{label}: %{value}<extra></extra>",
+    ))
+    fig_platform.add_annotation(
+        text=f"<b>{total}</b>",
+        x=0.5, y=0.55,
+        font=dict(size=32, color=TEXT, family="inherit"),
+        showarrow=False,
     )
-    fig_platform.update_traces(textposition="inside", textinfo="percent+label")
-    fig_platform.update_layout(showlegend=True, margin=dict(t=50, b=10))
+    fig_platform.add_annotation(
+        text="Total",
+        x=0.5, y=0.40,
+        font=dict(size=11, color=MUTED, family="inherit"),
+        showarrow=False,
+    )
+    fig_platform.update_layout(
+        showlegend=True,
+        legend=dict(orientation="h", y=-0.15, font=dict(color=TEXT_SOFT, size=11)),
+        margin=dict(t=20, b=50, l=20, r=20),
+        paper_bgcolor="rgba(0,0,0,0)",
+        height=300,
+    )
 
-    # OS Version bar (top 15)
+    # ── Gráfico: versões de SO ────────────────────────────────
     if "osVersion" in df.columns:
-        os_df = df.groupby(["operatingSystem", "osVersion"]).size().reset_index(name="Total")
-        os_df = os_df.sort_values("Total", ascending=False).head(15)
-        fig_os = px.bar(
-            os_df, x="Total", y="osVersion", color="operatingSystem",
-            orientation="h", title="Versões de SO (Top 15)",
-            labels={"osVersion": "Versão", "operatingSystem": "Plataforma", "Total": "Dispositivos"},
-            color_discrete_sequence=px.colors.qualitative.Set2,
+        os_df = (
+            df.groupby(["operatingSystem", "osVersion"])
+            .size().reset_index(name="Total")
+            .sort_values("Total", ascending=False).head(12)
         )
-        fig_os.update_layout(yaxis={"categoryorder": "total ascending"}, margin=dict(t=50, b=10))
+        fig_os = apply_theme(px.bar(
+            os_df, x="Total", y="osVersion", color="operatingSystem",
+            orientation="h", title=None,
+            labels={"osVersion": "Versão", "operatingSystem": "Plataforma", "Total": "Dispositivos"},
+            color_discrete_sequence=PALETTE,
+        ))
+        fig_os.update_layout(yaxis={"categoryorder": "total ascending"}, height=300)
     else:
-        fig_os = go.Figure()
+        fig_os = apply_theme(go.Figure())
 
-    # Manufacturer bar (top 10)
+    # ── Gráfico: fabricantes ──────────────────────────────────
     if "manufacturer" in df.columns:
         mfr_df = (
             df[df["manufacturer"].notna() & (df["manufacturer"] != "")]
-            ["manufacturer"].value_counts().head(10).reset_index()
+            ["manufacturer"].value_counts().head(8).reset_index()
         )
         mfr_df.columns = ["Fabricante", "Dispositivos"]
-        fig_mfr = px.bar(
+        fig_mfr = apply_theme(px.bar(
             mfr_df, x="Dispositivos", y="Fabricante", orientation="h",
-            title="Top 10 Fabricantes", color="Dispositivos",
-            color_continuous_scale="Blues",
+            labels={"Fabricante": "", "Dispositivos": "Dispositivos"},
+            color="Dispositivos",
+            color_continuous_scale=[[0, "#dbeafe"], [1, PRIMARY]],
+        ))
+        fig_mfr.update_layout(
+            yaxis={"categoryorder": "total ascending"},
+            coloraxis_showscale=False,
+            height=280,
         )
-        fig_mfr.update_layout(yaxis={"categoryorder": "total ascending"}, margin=dict(t=50, b=10))
     else:
-        fig_mfr = go.Figure()
+        fig_mfr = apply_theme(go.Figure())
 
-    # Ownership type distribution
+    # ── Gráfico: ownership ────────────────────────────────────
     if "managedDeviceOwnerType" in df.columns:
         owner_df = df["managedDeviceOwnerType"].value_counts().reset_index()
         owner_df.columns = ["Tipo", "Total"]
-        fig_owner = px.pie(
+        fig_owner = apply_theme(px.pie(
             owner_df, names="Tipo", values="Total",
-            title="Corporativo vs. Pessoal (BYOD)",
-            color_discrete_sequence=["#0d6efd", "#6c757d"],
-            hole=0.4,
-        )
+            color_discrete_sequence=[PRIMARY, "#93c5fd"],
+            hole=0.55,
+        ))
         fig_owner.update_traces(textposition="inside", textinfo="percent+label")
-        fig_owner.update_layout(showlegend=True, margin=dict(t=50, b=10))
+        fig_owner.update_layout(
+            showlegend=False,
+            margin=dict(t=10, b=10, l=10, r=10),
+            height=280,
+        )
     else:
-        fig_owner = go.Figure()
+        fig_owner = apply_theme(go.Figure())
 
-    # Device table
-    table_cols = ["deviceName", "operatingSystem", "osVersion", "userDisplayName", "complianceState", "managementState", "manufacturer", "model", "deviceCategoryDisplayName"]
+    # ── Tabela de dispositivos ────────────────────────────────
+    table_cols = [
+        "deviceName", "operatingSystem", "osVersion", "userDisplayName",
+        "complianceState", "manufacturer", "model",
+    ]
     table_cols = [c for c in table_cols if c in df.columns]
-    table_df = df[table_cols].copy()
+    table_df   = df[table_cols].head(100).copy()
 
     return html.Div([
-        html.H4("Inventário de Dispositivos", className="mb-4 fw-bold"),
+        page_header(
+            "Inventário de Dispositivos",
+            "Visão completa de todos os dispositivos gerenciados no Intune",
+        ),
 
+        # KPI Cards
         dbc.Row([
-            dbc.Col(_kpi("Total de Dispositivos", total, "primary"), md=4),
-            dbc.Col(_kpi("Plataformas", platforms, "info"), md=4),
-            dbc.Col(_kpi("Fabricantes", manufacturers, "success"), md=4),
+            dbc.Col(kpi_card(
+                "Total de Dispositivos", total,
+                color_key="primary", icon="bi-laptop",
+                subtitle="Dispositivos cadastrados",
+            ), md=3),
+            dbc.Col(kpi_card(
+                "Compliance", compliance_pct,
+                color_key="success", icon="bi-patch-check",
+                subtitle=f"{compliant} dispositivos conformes",
+            ), md=3),
+            dbc.Col(kpi_card(
+                "Plataformas", platforms,
+                color_key="info", icon="bi-grid-1x2",
+                subtitle="Sistemas operacionais ativos",
+            ), md=3),
+            dbc.Col(kpi_card(
+                "Fabricantes", manufacturers,
+                color_key="warning", icon="bi-building",
+                subtitle="Marcas diferentes",
+            ), md=3),
         ], className="mb-4 g-3"),
 
+        # Gráficos linha 1
         dbc.Row([
-            dbc.Col(dcc.Graph(figure=fig_platform), md=4),
-            dbc.Col(dcc.Graph(figure=fig_os), md=8),
+            dbc.Col(
+                chart_card(
+                    "Distribuição por Plataforma",
+                    dcc.Graph(figure=fig_platform, config={"displayModeBar": False}),
+                ),
+                md=4,
+            ),
+            dbc.Col(
+                chart_card(
+                    "Top 12 — Versões de SO",
+                    dcc.Graph(figure=fig_os, config={"displayModeBar": False}),
+                ),
+                md=8,
+            ),
         ], className="mb-4"),
 
+        # Gráficos linha 2
         dbc.Row([
-            dbc.Col(dcc.Graph(figure=fig_mfr), md=8),
-            dbc.Col(dcc.Graph(figure=fig_owner), md=4),
+            dbc.Col(
+                chart_card(
+                    "Top 8 Fabricantes",
+                    dcc.Graph(figure=fig_mfr, config={"displayModeBar": False}),
+                ),
+                md=8,
+            ),
+            dbc.Col(
+                chart_card(
+                    "Corporativo vs. BYOD",
+                    dcc.Graph(figure=fig_owner, config={"displayModeBar": False}),
+                ),
+                md=4,
+            ),
         ], className="mb-4"),
 
-        html.H5("Todos os Dispositivos", className="mb-3 fw-semibold"),
-        dash_table.DataTable(
-            data=table_df.to_dict("records"),
-            columns=[{"name": c, "id": c} for c in table_df.columns],
-            filter_action="native",
-            sort_action="native",
-            page_size=20,
-            style_table={"overflowX": "auto"},
-            style_cell={"textAlign": "left", "padding": "8px", "fontSize": "13px"},
-            style_header={"backgroundColor": "#343a40", "color": "white", "fontWeight": "bold"},
-            style_data_conditional=[
-                {"if": {"filter_query": '{complianceState} = "noncompliant"'}, "backgroundColor": "#fff3cd"},
-            ],
+        # Tabela
+        table_card(
+            "Lista de Dispositivos",
+            dash_table.DataTable(
+                data=table_df.to_dict("records"),
+                columns=[{"name": c, "id": c} for c in table_df.columns],
+                **TABLE_KWARGS,
+                style_data_conditional=[
+                    {"if": {"filter_query": '{complianceState} = "noncompliant"'},
+                     "backgroundColor": "#fef2f2", "color": DANGER},
+                    {"if": {"filter_query": '{complianceState} = "compliant"'},
+                     "color": SUCCESS},
+                ],
+            ),
+            link_text="Ver Todos",
         ),
     ])
