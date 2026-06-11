@@ -14,6 +14,9 @@ app = dash.Dash(
 app.title = "Intune Dashboard"
 server = app.server  # necessário para o gunicorn
 
+# Importa páginas com callbacks no startup para registrá-los (filtros de Lojas / Aplicativos)
+from pages import stores, applications  # noqa: E402,F401
+
 VALID_USERS = {
     os.getenv("DASHBOARD_USER", "admin"): os.getenv("DASHBOARD_PASSWORD", "changeme")
 }
@@ -31,6 +34,9 @@ NAV_SECTIONS = [
     ("LOCALIZAÇÃO", [
         ("Lojas",       "/stores",      "bi-shop"),
     ]),
+    ("GESTÃO", [
+        ("Aplicativos", "/applications", "bi-app-indicator"),
+    ]),
 ]
 
 BREADCRUMB_MAP = {
@@ -38,6 +44,7 @@ BREADCRUMB_MAP = {
     "/operational": ("Operações",    "Operacional"),
     "/security":    ("Operações",    "Segurança"),
     "/stores":      ("Localização",  "Lojas"),
+    "/applications": ("Gestão",      "Aplicativos"),
 }
 
 # ── Sidebar ────────────────────────────────────────────────────
@@ -243,7 +250,7 @@ def update_breadcrumb(pathname):
 
 @app.callback(Output("page-content", "children"), Input("url", "pathname"))
 def render_page(pathname: str):
-    from pages import inventory, operational, security, stores
+    from pages import inventory, operational, security, stores, applications
     if pathname in ("/", "/inventory"):
         return inventory.layout()
     if pathname == "/operational":
@@ -252,6 +259,8 @@ def render_page(pathname: str):
         return security.layout()
     if pathname == "/stores":
         return stores.layout()
+    if pathname == "/applications":
+        return applications.layout()
     return html.Div([
         html.Div([
             html.I(className="bi bi-exclamation-circle",
